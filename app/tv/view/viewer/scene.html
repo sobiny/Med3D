@@ -196,9 +196,6 @@
     grid.material.transparent = true;
     scene.add(grid);
 
-    const rootGroup = new THREE.Group();
-    scene.add(rootGroup);
-
     // Draco decoder (关键：必须指向 decoder 文件目录)
     // 推荐你把 draco decoder 放到：/static/draco/ 目录下（draco_decoder.js / .wasm）
     // 如果你现在没有本地文件，可先用 CDN（但生产建议本地化）
@@ -213,6 +210,8 @@
 
     // 用于“一键居中”
     const globalBox = new THREE.Box3();
+    const modelRoot = new THREE.Group();
+    scene.add(modelRoot);
 
     // ---------
     // UI 渲染：侧边栏列表
@@ -342,6 +341,15 @@
 
         const type = (m.file_type || '').toLowerCase();
 
+        const addModelToScene = (object) => {
+            const wrapper = new THREE.Group();
+            wrapper.add(object);
+            // 将 Z-up 数据旋转为 three.js 的 Y-up，模型由“趴着”立起来
+            wrapper.rotation.x = -Math.PI / 2;
+            modelRoot.add(wrapper);
+            globalBox.expandByObject(wrapper);
+        };
+
         // glb/gltf
         if (type === 'glb' || type === 'gltf') {
             await new Promise((resolve, reject) => {
@@ -357,8 +365,7 @@
                         }
                     });
 
-                    rootGroup.add(obj);
-                    globalBox.expandByObject(obj);
+                    addModelToScene(obj);
                     finalizeProgress();
                     resolve();
                 }, handleProgress, (err) => { finalizeProgress(); reject(err); });
@@ -373,8 +380,7 @@
                     geometry.computeVertexNormals?.();
 
                     const mesh = new THREE.Mesh(geometry, mat);
-                    rootGroup.add(mesh);
-                    globalBox.expandByObject(mesh);
+                    addModelToScene(mesh);
                     finalizeProgress();
                     resolve();
                 }, handleProgress, (err) => { finalizeProgress(); reject(err); });
@@ -390,8 +396,7 @@
                     geometry.rotateX(-Math.PI / 2);
                     geometry.computeVertexNormals?.();
                     const mesh = new THREE.Mesh(geometry, mat);
-                    rootGroup.add(mesh);
-                    globalBox.expandByObject(mesh);
+                    addModelToScene(mesh);
                     finalizeProgress();
                     resolve();
                 }, handleProgress, (err) => { finalizeProgress(); reject(err); });
@@ -406,8 +411,7 @@
                     obj.traverse((child) => {
                         if (child.isMesh) child.material = mat;
                     });
-                    rootGroup.add(obj);
-                    globalBox.expandByObject(obj);
+                    addModelToScene(obj);
                     finalizeProgress();
                     resolve();
                 }, handleProgress, (err) => { finalizeProgress(); reject(err); });
