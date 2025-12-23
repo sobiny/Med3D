@@ -6,28 +6,31 @@
     <title>{$scene.title|default='3D Viewer'} - Scene #{$scene.id}</title>
 
     <style>
+        :root { --panel-width: 340px; --topbar-height: 56px; }
         html, body { height: 100%; margin: 0; background: #0f141c; color: #e8eef7; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
         .topbar {
             position: fixed; left: 0; right: 0; top: 0;
-            height: 56px; display: flex; align-items: center; justify-content: space-between;
-            padding: 0 14px; background: rgba(10,14,20,.75); backdrop-filter: blur(10px);
+            min-height: var(--topbar-height); display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px; background: rgba(10,14,20,.75); backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255,255,255,.08); z-index: 10;
+            gap: 10px; flex-wrap: wrap;
         }
         .title { font-weight: 650; font-size: 14px; letter-spacing: .2px; }
         .meta { font-size: 12px; opacity: .8; }
-        #wrap { position: fixed; left: 0; right: 340px; top: 56px; bottom: 0; }
+        #wrap { position: fixed; left: 0; right: var(--panel-width); top: var(--topbar-height); bottom: 0; transition: right .25s ease; }
         #panel {
-            position: fixed; top: 56px; right: 0; bottom: 0; width: 340px;
+            position: fixed; top: var(--topbar-height); right: 0; bottom: 0; width: var(--panel-width);
             background: rgba(10,14,20,.65); border-left: 1px solid rgba(255,255,255,.08);
-            overflow: auto;
+            overflow: auto; transition: transform .25s ease;
         }
+        body.panel-hidden #panel { transform: translateX(100%); }
+        body.panel-hidden #wrap { right: 0; }
         .section { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
         .section h3 { margin: 0 0 8px; font-size: 12px; opacity: .9; }
         .item { padding: 10px; border-radius: 10px; background: rgba(255,255,255,.04); margin-bottom: 10px; }
-        .row { display: flex; justify-content: space-between; gap: 10px; }
-        .name { font-size: 13px; font-weight: 600; }
-        .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); opacity: .9; }
-        .sub { margin-top: 6px; font-size: 12px; opacity: .75; line-height: 1.4; word-break: break-all; }
+        .row { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .name { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .sub { margin-top: 6px; font-size: 12px; opacity: .75; line-height: 1.5; word-break: break-all; }
         .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; margin-right: 6px; vertical-align: -1px; border: 1px solid rgba(255,255,255,.25); }
         .btn {
             display: inline-flex; align-items: center; justify-content: center;
@@ -35,6 +38,7 @@
             color: #e8eef7; border-radius: 10px; padding: 8px 10px; cursor: pointer;
             font-size: 12px;
         }
+        .btn.small { padding: 6px 8px; font-size: 11px; }
         .btn:active { transform: translateY(1px); }
         .progress {
             margin-bottom: 12px;
@@ -61,6 +65,57 @@
             opacity: .75;
             margin: 0 0 6px;
         }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: rgba(255,255,255,.2);
+            transition: .2s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #0f141c;
+            transition: .2s;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,.35);
+        }
+        .switch input:checked + .slider { background-color: #7dd0ff; }
+        .switch input:checked + .slider:before { transform: translateX(16px); }
+        .card-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+        .range {
+            display: flex; align-items: center; gap: 6px; font-size: 12px;
+            flex: 1 1 150px;
+        }
+        .range input[type=range] { flex: 1; accent-color: #7dd0ff; }
+        .status { font-size: 12px; opacity: .8; }
+        .top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        @media (max-width: 900px) {
+            :root { --panel-width: 100%; }
+            #wrap { top: calc(var(--topbar-height) + 6px); right: 0; }
+            #panel {
+                left: 10px; right: 10px; width: auto; bottom: 10px; top: auto;
+                height: 52%; border-left: none;
+                border-radius: 14px; box-shadow: 0 10px 35px rgba(0,0,0,.45);
+                transform: translateY(110%);
+            }
+            body.panel-hidden #panel { transform: translateY(110%); }
+            body.panel-visible #panel { transform: translateY(0); }
+            .topbar { align-items: flex-start; }
+            .meta { line-height: 1.4; }
+        }
     </style>
 </head>
 <body>
@@ -73,7 +128,8 @@
             重建日期：{$scene.recon_date|default='-'}
         </div>
     </div>
-    <div style="display:flex; gap:10px;">
+    <div class="top-actions">
+        <button class="btn" id="btnTogglePanel">模型控制</button>
         <button class="btn" id="btnFit">一键居中</button>
         <button class="btn" id="btnReset">重置视角</button>
     </div>
@@ -229,40 +285,46 @@
         const pct = progressState.total > 0 ? Math.min(100, (progressState.loaded / progressState.total) * 100) : 0;
         progressFill.style.width = `${pct}%`;
         progressText.textContent = `${label}（${pct.toFixed(0)}%）`;
-    }
+        }
 
-    function addModelCard(m, color) {
-        const div = document.createElement('div');
-        div.className = 'item';
+        function addModelCard(m, color) {
+            const div = document.createElement('div');
+            div.className = 'item';
 
         const dot = `<span class="dot" style="background:${color}"></span>`;
-        const badge = `<span class="badge">${(m.file_type || 'file').toUpperCase()}</span>`;
 
         div.innerHTML = `
         <div class="row">
           <div class="name">${dot}${escapeHtml(m.display_name || '未命名')}</div>
-          ${badge}
+          <label class="switch"><input type="checkbox" checked disabled aria-label="显示 / 隐藏模型"><span class="slider"></span></label>
         </div>
         <div class="sub">
           ${m.material_text ? `材料：${escapeHtml(m.material_text)}<br/>` : ''}
           ${m.color_hex ? `颜色：${escapeHtml(m.color_hex)}<br/>` : ''}
-          ${m.file_size ? `大小：${formatBytes(m.file_size)}<br/>` : ''}
+          <span class="status">准备加载…</span>
+        </div>
+        <div class="card-controls">
+          <div class="range">
+            <span>透明度</span>
+            <input type="range" min="30" max="100" value="100" disabled aria-label="调整透明度">
+            <span class="range-value">100%</span>
+          </div>
+          <button class="btn small" disabled>聚焦</button>
         </div>
       `;
         modelList.appendChild(div);
+        return {
+            root: div,
+            toggle: div.querySelector('input[type=checkbox]'),
+            opacityRange: div.querySelector('input[type=range]'),
+            opacityValue: div.querySelector('.range-value'),
+            focusBtn: div.querySelector('button'),
+            status: div.querySelector('.status'),
+        };
     }
 
     function escapeHtml(s) {
         return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-
-    function formatBytes(bytes) {
-        const n = Number(bytes || 0);
-        if (!n) return '-';
-        const units = ['B','KB','MB','GB'];
-        let v = n, i = 0;
-        while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
-        return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
     }
 
     // ---------
@@ -293,7 +355,8 @@
             color: new THREE.Color(color),
             metalness: 0.05,
             roughness: 0.85,
-            transparent: false,
+            transparent: true,
+            opacity: 1,
         });
 
         return { mat, color };
@@ -307,11 +370,17 @@
         if (!url) return;
 
         const { mat, color } = materialForModel(m, idx);
-        addModelCard(m, color);
+        const card = addModelCard(m, color);
 
         const modelTotal = Number(m.file_size) || 1;
         let modelLoaded = 0;
         const progressLabel = `下载 ${m.display_name || m.file_type || '模型'}`;
+        const markFailed = () => {
+            card.status.textContent = '加载失败';
+            card.toggle.disabled = true;
+            card.opacityRange.disabled = true;
+            card.focusBtn.disabled = true;
+        };
 
         const handleProgress = (evt) => {
             if (!evt || typeof evt.loaded !== 'number') return;
@@ -348,6 +417,7 @@
             wrapper.rotation.x = -Math.PI / 2;
             modelRoot.add(wrapper);
             globalBox.expandByObject(wrapper);
+            return wrapper;
         };
 
         // glb/gltf
@@ -365,10 +435,11 @@
                         }
                     });
 
-                    addModelToScene(obj);
+                    const wrapper = addModelToScene(obj);
+                    bindCard(card, { wrapper, material: mat, meta: m });
                     finalizeProgress();
-                    resolve();
-                }, handleProgress, (err) => { finalizeProgress(); reject(err); });
+                    resolve({ wrapper });
+                }, handleProgress, (err) => { finalizeProgress(); markFailed(); reject(err); });
             });
             return;
         }
@@ -380,10 +451,11 @@
                     geometry.computeVertexNormals?.();
 
                     const mesh = new THREE.Mesh(geometry, mat);
-                    addModelToScene(mesh);
+                    const wrapper = addModelToScene(mesh);
+                    bindCard(card, { wrapper, material: mat, meta: m });
                     finalizeProgress();
-                    resolve();
-                }, handleProgress, (err) => { finalizeProgress(); reject(err); });
+                    resolve({ wrapper });
+                }, handleProgress, (err) => { finalizeProgress(); markFailed(); reject(err); });
             });
             return;
         }
@@ -396,10 +468,11 @@
                     geometry.rotateX(-Math.PI / 2);
                     geometry.computeVertexNormals?.();
                     const mesh = new THREE.Mesh(geometry, mat);
-                    addModelToScene(mesh);
+                    const wrapper = addModelToScene(mesh);
+                    bindCard(card, { wrapper, material: mat, meta: m });
                     finalizeProgress();
-                    resolve();
-                }, handleProgress, (err) => { finalizeProgress(); reject(err); });
+                    resolve({ wrapper });
+                }, handleProgress, (err) => { finalizeProgress(); markFailed(); reject(err); });
             });
             return;
         }
@@ -411,15 +484,42 @@
                     obj.traverse((child) => {
                         if (child.isMesh) child.material = mat;
                     });
-                    addModelToScene(obj);
+                    const wrapper = addModelToScene(obj);
+                    bindCard(card, { wrapper, material: mat, meta: m });
                     finalizeProgress();
-                    resolve();
-                }, handleProgress, (err) => { finalizeProgress(); reject(err); });
+                    resolve({ wrapper });
+                }, handleProgress, (err) => { finalizeProgress(); markFailed(); reject(err); });
             });
             return;
         }
 
         console.warn('Unsupported file_type:', type, m);
+        card.status.textContent = '格式暂不支持';
+    }
+
+    function bindCard(card, entry) {
+        if (!card) return;
+        card.status.textContent = '展示中';
+        card.toggle.disabled = false;
+        card.opacityRange.disabled = false;
+        card.focusBtn.disabled = false;
+
+        card.toggle.addEventListener('change', () => {
+            entry.wrapper.visible = card.toggle.checked;
+            card.status.textContent = card.toggle.checked ? '展示中' : '已隐藏';
+        });
+
+        const applyOpacity = (value) => {
+            const v = Math.max(0.1, Math.min(1, value / 100));
+            entry.material.opacity = v;
+            entry.material.transparent = v < 1;
+            entry.material.depthWrite = v >= 0.6;
+            card.opacityValue.textContent = `${Math.round(v * 100)}%`;
+        };
+
+        applyOpacity(Number(card.opacityRange.value || 100));
+        card.opacityRange.addEventListener('input', (e) => applyOpacity(Number(e.target.value)));
+        card.focusBtn.addEventListener('click', () => fitToObject(entry.wrapper));
     }
 
     // ---------
@@ -453,6 +553,38 @@
         camera.position.set(0, 300, 500);
         controls.target.set(0, 0, 0);
         controls.update();
+    });
+
+    function fitToObject(obj) {
+        if (!obj) return;
+        const box = new THREE.Box3().setFromObject(obj);
+        fitToBox(box);
+    }
+
+    const body = document.body;
+    const btnTogglePanel = document.getElementById('btnTogglePanel');
+    let panelOpen = window.innerWidth > 900;
+
+    function syncPanelState(forceOpen = null) {
+        if (forceOpen !== null) panelOpen = forceOpen;
+        body.classList.toggle('panel-hidden', !panelOpen);
+        body.classList.toggle('panel-visible', panelOpen);
+        btnTogglePanel.textContent = panelOpen ? '收起控制' : '模型控制';
+    }
+
+    syncPanelState(panelOpen);
+    btnTogglePanel.addEventListener('click', () => syncPanelState(!panelOpen));
+
+    function updateTopbarHeight() {
+        const h = document.querySelector('.topbar').offsetHeight || 56;
+        document.documentElement.style.setProperty('--topbar-height', `${h}px`);
+    }
+    updateTopbarHeight();
+    window.addEventListener('resize', () => {
+        updateTopbarHeight();
+        if (window.innerWidth > 900 && !panelOpen) {
+            syncPanelState(true);
+        }
     });
 
     // ---------
