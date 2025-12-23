@@ -10,7 +10,7 @@
         html, body { height: 100%; margin: 0; background: #0f141c; color: #e8eef7; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
         .topbar {
             position: fixed; left: 0; right: 0; top: 0;
-            min-height: var(--topbar-height); display: flex; align-items: center; justify-content: space-between;
+            min-height: 56px; display: flex; align-items: center; justify-content: space-between;
             padding: 10px 14px; background: rgba(10,14,20,.75); backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255,255,255,.08); z-index: 10;
             gap: 10px; flex-wrap: wrap;
@@ -306,7 +306,7 @@
         <div class="card-controls">
           <div class="range">
             <span>透明度</span>
-            <input type="range" min="30" max="100" value="100" disabled aria-label="调整透明度">
+            <input type="range" min="0" max="100" value="100" disabled aria-label="调整透明度">
             <span class="range-value">100%</span>
           </div>
           <button class="btn small" disabled>聚焦</button>
@@ -510,11 +510,12 @@
         });
 
         const applyOpacity = (value) => {
-            const v = Math.max(0.1, Math.min(1, value / 100));
+            const clamped = Math.max(0, Math.min(100, value));
+            const v = clamped / 100;
             entry.material.opacity = v;
             entry.material.transparent = v < 1;
             entry.material.depthWrite = v >= 0.6;
-            card.opacityValue.textContent = `${Math.round(v * 100)}%`;
+            card.opacityValue.textContent = `${Math.round(clamped)}%`;
         };
 
         applyOpacity(Number(card.opacityRange.value || 100));
@@ -563,6 +564,7 @@
 
     const body = document.body;
     const btnTogglePanel = document.getElementById('btnTogglePanel');
+    const topbarEl = document.querySelector('.topbar');
     let panelOpen = window.innerWidth > 900;
 
     function syncPanelState(forceOpen = null) {
@@ -575,13 +577,15 @@
     syncPanelState(panelOpen);
     btnTogglePanel.addEventListener('click', () => syncPanelState(!panelOpen));
 
-    function updateTopbarHeight() {
-        const h = document.querySelector('.topbar').offsetHeight || 56;
+    const updateTopbarHeight = () => {
+        const h = Math.max(56, Math.round(topbarEl?.getBoundingClientRect().height || 56));
         document.documentElement.style.setProperty('--topbar-height', `${h}px`);
-    }
+    };
     updateTopbarHeight();
+    const topbarObserver = new ResizeObserver(updateTopbarHeight);
+    if (topbarEl) topbarObserver.observe(topbarEl);
+
     window.addEventListener('resize', () => {
-        updateTopbarHeight();
         if (window.innerWidth > 900 && !panelOpen) {
             syncPanelState(true);
         }
