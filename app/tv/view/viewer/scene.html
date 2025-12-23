@@ -6,7 +6,7 @@
     <title>{$scene.title|default='3D Viewer'} - Scene #{$scene.id}</title>
 
     <style>
-        html, body { height: 100%; margin: 0; background: #0b0f14; color: #e8eef7; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+        html, body { height: 100%; margin: 0; background: #0f141c; color: #e8eef7; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
         .topbar {
             position: fixed; left: 0; right: 0; top: 0;
             height: 56px; display: flex; align-items: center; justify-content: space-between;
@@ -36,6 +36,31 @@
             font-size: 12px;
         }
         .btn:active { transform: translateY(1px); }
+        .progress {
+            margin-bottom: 12px;
+        }
+        .progress-bar {
+            position: relative;
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.08);
+            overflow: hidden;
+        }
+        .progress-fill {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #7dd0ff, #9cd8ff);
+            box-shadow: 0 0 16px rgba(124,209,255,.35);
+            transition: width .2s ease;
+        }
+        .progress-text {
+            font-size: 12px;
+            opacity: .75;
+            margin: 0 0 6px;
+        }
     </style>
 </head>
 <body>
@@ -59,6 +84,12 @@
 <aside id="panel">
     <div class="section">
         <h3>模型列表</h3>
+        <div class="progress" id="progressContainer">
+            <div class="progress-text" id="progressText">准备下载模型…</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
         <div id="modelList"></div>
     </div>
     <div class="section">
@@ -127,7 +158,7 @@
     // ---------
     const container = document.getElementById('wrap');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0f14);
+    scene.background = new THREE.Color(0x0f141c);
 
     const camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 200000);
     camera.position.set(0, 300, 500);
@@ -135,20 +166,28 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
     // Lights
-    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-    const dir1 = new THREE.DirectionalLight(0xffffff, 0.55);
-    dir1.position.set(1, 1.2, 0.8);
+    scene.add(new THREE.HemisphereLight(0xeff5ff, 0x0b0f14, 0.45));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    const dir1 = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir1.position.set(1.2, 1.4, 0.8);
     scene.add(dir1);
 
-    const dir2 = new THREE.DirectionalLight(0xffffff, 0.35);
-    dir2.position.set(-1, 0.6, -0.8);
+    const dir2 = new THREE.DirectionalLight(0xffffff, 0.55);
+    dir2.position.set(-1.1, 0.8, -0.8);
     scene.add(dir2);
+
+    const rim = new THREE.DirectionalLight(0xadd8ff, 0.35);
+    rim.position.set(0.2, 0.8, 1.4);
+    scene.add(rim);
 
     // Ground helpers (subtle)
     const grid = new THREE.GridHelper(1000, 20, 0x2a3442, 0x1d2531);
@@ -156,9 +195,6 @@
     grid.material.opacity = 0.25;
     grid.material.transparent = true;
     scene.add(grid);
-
-    const rootGroup = new THREE.Group();
-    scene.add(rootGroup);
 
     // Draco decoder (关键：必须指向 decoder 文件目录)
     // 推荐你把 draco decoder 放到：/static/draco/ 目录下（draco_decoder.js / .wasm）
@@ -174,11 +210,26 @@
 
     // 用于“一键居中”
     const globalBox = new THREE.Box3();
+    const modelRoot = new THREE.Group();
+    scene.add(modelRoot);
 
     // ---------
     // UI 渲染：侧边栏列表
     // ---------
     const modelList = document.getElementById('modelList');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+
+    const progressState = {
+        loaded: 0,
+        total: 0,
+    };
+
+    function updateProgress(label = '正在下载…') {
+        const pct = progressState.total > 0 ? Math.min(100, (progressState.loaded / progressState.total) * 100) : 0;
+        progressFill.style.width = `${pct}%`;
+        progressText.textContent = `${label}（${pct.toFixed(0)}%）`;
+    }
 
     function addModelCard(m, color) {
         const div = document.createElement('div');
@@ -258,14 +309,53 @@
         const { mat, color } = materialForModel(m, idx);
         addModelCard(m, color);
 
+        const modelTotal = Number(m.file_size) || 1;
+        let modelLoaded = 0;
+        const progressLabel = `下载 ${m.display_name || m.file_type || '模型'}`;
+
+        const handleProgress = (evt) => {
+            if (!evt || typeof evt.loaded !== 'number') return;
+            let current = evt.loaded;
+            if (evt.lengthComputable && evt.total > 0) {
+                const ratio = modelTotal / evt.total;
+                current = Math.min(modelTotal, evt.loaded * ratio);
+            } else {
+                current = Math.min(modelTotal, evt.loaded);
+            }
+            const delta = current - modelLoaded;
+            if (delta > 0) {
+                modelLoaded += delta;
+                progressState.loaded += delta;
+                updateProgress(progressLabel);
+            }
+        };
+
+        const finalizeProgress = () => {
+            const delta = modelTotal - modelLoaded;
+            if (delta > 0) {
+                modelLoaded = modelTotal;
+                progressState.loaded += delta;
+                updateProgress(progressLabel);
+            }
+        };
+
         const type = (m.file_type || '').toLowerCase();
+
+        const addModelToScene = (object) => {
+            const wrapper = new THREE.Group();
+            wrapper.add(object);
+            // 将 Z-up 数据旋转为 three.js 的 Y-up，模型由“趴着”立起来
+            wrapper.rotation.x = -Math.PI / 2;
+            modelRoot.add(wrapper);
+            globalBox.expandByObject(wrapper);
+        };
 
         // glb/gltf
         if (type === 'glb' || type === 'gltf') {
             await new Promise((resolve, reject) => {
                 gltfLoader.load(url, (gltf) => {
                     const obj = gltf.scene || gltf.scenes?.[0];
-                    if (!obj) { resolve(); return; }
+                    if (!obj) { finalizeProgress(); resolve(); return; }
 
                     obj.traverse((child) => {
                         if (child.isMesh) {
@@ -275,10 +365,10 @@
                         }
                     });
 
-                    rootGroup.add(obj);
-                    globalBox.expandByObject(obj);
+                    addModelToScene(obj);
+                    finalizeProgress();
                     resolve();
-                }, undefined, reject);
+                }, handleProgress, (err) => { finalizeProgress(); reject(err); });
             });
             return;
         }
@@ -290,10 +380,10 @@
                     geometry.computeVertexNormals?.();
 
                     const mesh = new THREE.Mesh(geometry, mat);
-                    rootGroup.add(mesh);
-                    globalBox.expandByObject(mesh);
+                    addModelToScene(mesh);
+                    finalizeProgress();
                     resolve();
-                }, undefined, reject);
+                }, handleProgress, (err) => { finalizeProgress(); reject(err); });
             });
             return;
         }
@@ -304,10 +394,10 @@
                 stlLoader.load(url, (geometry) => {
                     geometry.computeVertexNormals?.();
                     const mesh = new THREE.Mesh(geometry, mat);
-                    rootGroup.add(mesh);
-                    globalBox.expandByObject(mesh);
+                    addModelToScene(mesh);
+                    finalizeProgress();
                     resolve();
-                }, undefined, reject);
+                }, handleProgress, (err) => { finalizeProgress(); reject(err); });
             });
             return;
         }
@@ -319,10 +409,10 @@
                     obj.traverse((child) => {
                         if (child.isMesh) child.material = mat;
                     });
-                    rootGroup.add(obj);
-                    globalBox.expandByObject(obj);
+                    addModelToScene(obj);
+                    finalizeProgress();
                     resolve();
-                }, undefined, reject);
+                }, handleProgress, (err) => { finalizeProgress(); reject(err); });
             });
             return;
         }
@@ -372,8 +462,13 @@
 
         if (!list.length) {
             modelList.innerHTML = '<div class="sub">该场景暂无模型数据。</div>';
+            progressText.textContent = '无可下载的模型';
             return;
         }
+
+        progressState.total = list.reduce((sum, m) => sum + (Number(m.file_size) || 1), 0);
+        progressState.loaded = 0;
+        updateProgress('准备下载模型…');
 
         for (let i = 0; i < list.length; i++) {
             try {
@@ -383,6 +478,8 @@
             }
         }
 
+        progressState.loaded = progressState.total;
+        updateProgress('下载完成，模型已就绪');
         fitToBox(globalBox);
     })();
 
