@@ -392,6 +392,8 @@
         if (type === 'stl') {
             await new Promise((resolve, reject) => {
                 stlLoader.load(url, (geometry) => {
+                    // 原始 STL 从 CT 重建是“平躺”的，旋转到直立朝向
+                    geometry.rotateX(-Math.PI / 2);
                     geometry.computeVertexNormals?.();
                     const mesh = new THREE.Mesh(geometry, mat);
                     addModelToScene(mesh);
