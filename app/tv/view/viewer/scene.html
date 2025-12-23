@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>{$scene.title|default='3D Viewer'} - Scene #{$scene.id}</title>
+
+    <style>
+        html, body { height: 100%; margin: 0; background: #0b0f14; color: #e8eef7; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+        .topbar {
+            position: fixed; left: 0; right: 0; top: 0;
+            height: 56px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 14px; background: rgba(10,14,20,.75); backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,.08); z-index: 10;
+        }
+        .title { font-weight: 650; font-size: 14px; letter-spacing: .2px; }
+        .meta { font-size: 12px; opacity: .8; }
+        #wrap { position: fixed; left: 0; right: 340px; top: 56px; bottom: 0; }
+        #panel {
+            position: fixed; top: 56px; right: 0; bottom: 0; width: 340px;
+            background: rgba(10,14,20,.65); border-left: 1px solid rgba(255,255,255,.08);
+            overflow: auto;
+        }
+        .section { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+        .section h3 { margin: 0 0 8px; font-size: 12px; opacity: .9; }
+        .item { padding: 10px; border-radius: 10px; background: rgba(255,255,255,.04); margin-bottom: 10px; }
+        .row { display: flex; justify-content: space-between; gap: 10px; }
+        .name { font-size: 13px; font-weight: 600; }
+        .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); opacity: .9; }
+        .sub { margin-top: 6px; font-size: 12px; opacity: .75; line-height: 1.4; word-break: break-all; }
+        .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; margin-right: 6px; vertical-align: -1px; border: 1px solid rgba(255,255,255,.25); }
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06);
+            color: #e8eef7; border-radius: 10px; padding: 8px 10px; cursor: pointer;
+            font-size: 12px;
+        }
+        .btn:active { transform: translateY(1px); }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div>
+        <div class="title">{$scene.title|default='场景'} <span style="opacity:.7">#{$scene.id}</span></div>
+        <div class="meta">
+            影像号：{$scene.imaging_number|default='-'}　
+            影像日期：{$scene.imaging_date|default='-'}　
+            重建日期：{$scene.recon_date|default='-'}
+        </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <button class="btn" id="btnFit">一键居中</button>
+        <button class="btn" id="btnReset">重置视角</button>
+    </div>
+</div>
+
+<div id="wrap"></div>
+
+<aside id="panel">
+    <div class="section">
+        <h3>模型列表</h3>
+        <div id="modelList"></div>
+    </div>
+    <div class="section">
+        <h3>操作</h3>
+        <div class="sub">
+            鼠标左键旋转、右键平移、滚轮缩放。<br/>
+            颜色规则：若 <b>color</b> 和 <b>material</b> 都为空，将按顺序自动分配配色。
+        </div>
+    </div>
+</aside>
+
+<!-- 把 PHP 传入的 models 注入到 JS -->
+<script>
+    const SCENE = <?php echo json_encode($scene, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); ?>;
+    const MODELS = <?php echo json_encode($models, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); ?>;
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/examples/jsm/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<!-- Three.js (module) -->
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+    import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+    import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+    import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+
+    // ---------
+    // 颜色策略：严肃、医疗风格偏中性
+    // 只有当 color_hex 和 material_text 都为空时才会依次分配
+    // ---------
+    const FALLBACK_PALETTE = [
+        '#D9DEE7', // 冷灰白
+        '#BFC9D6', // 钢蓝灰
+        '#C9D3C1', // 医用灰绿
+        '#D6C7B8', // 暖灰褐
+        '#C7CCD3', // 中性灰
+        '#D1D7DD', // 浅灰蓝
+        '#C9C2C9', // 灰紫（很淡）
+        '#D0D0C8', // 灰米
+    ];
+
+    function pickFallbackColor(idx) {
+        return FALLBACK_PALETTE[idx % FALLBACK_PALETTE.length];
+    }
+
+    function normalizeColorHex(s) {
+        if (!s) return '';
+        const t = String(s).trim();
+        if (!t) return '';
+        // 允许 '#fff' '#ffffff'
+        if (t[0] === '#') return t;
+        // 允许 'ffffff'
+        if (/^[0-9a-fA-F]{6}$/.test(t)) return '#' + t;
+        return t; // 允许 rgba(...) 等
+    }
+
+    // ---------
+    // 初始化 three.js 场景
+    // ---------
+    const container = document.getElementById('wrap');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0f14);
+
+    const camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 200000);
+    camera.position.set(0, 300, 500);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const dir1 = new THREE.DirectionalLight(0xffffff, 0.55);
+    dir1.position.set(1, 1.2, 0.8);
+    scene.add(dir1);
+
+    const dir2 = new THREE.DirectionalLight(0xffffff, 0.35);
+    dir2.position.set(-1, 0.6, -0.8);
+    scene.add(dir2);
+
+    // Ground helpers (subtle)
+    const grid = new THREE.GridHelper(1000, 20, 0x2a3442, 0x1d2531);
+    grid.position.y = 0;
+    grid.material.opacity = 0.25;
+    grid.material.transparent = true;
+    scene.add(grid);
+
+    const rootGroup = new THREE.Group();
+    scene.add(rootGroup);
+
+    // Draco decoder (关键：必须指向 decoder 文件目录)
+    // 推荐你把 draco decoder 放到：/static/draco/ 目录下（draco_decoder.js / .wasm）
+    // 如果你现在没有本地文件，可先用 CDN（但生产建议本地化）
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');
+
+    const gltfLoader = new GLTFLoader();
+    gltfLoader.setDRACOLoader(dracoLoader);
+
+    const stlLoader = new STLLoader();
+    const objLoader = new OBJLoader();
+
+    // 用于“一键居中”
+    const globalBox = new THREE.Box3();
+
+    // ---------
+    // UI 渲染：侧边栏列表
+    // ---------
+    const modelList = document.getElementById('modelList');
+
+    function addModelCard(m, color) {
+        const div = document.createElement('div');
+        div.className = 'item';
+
+        const dot = `<span class="dot" style="background:${color}"></span>`;
+        const badge = `<span class="badge">${(m.file_type || 'file').toUpperCase()}</span>`;
+
+        div.innerHTML = `
+        <div class="row">
+          <div class="name">${dot}${escapeHtml(m.display_name || '未命名')}</div>
+          ${badge}
+        </div>
+        <div class="sub">
+          ${m.material_text ? `材料：${escapeHtml(m.material_text)}<br/>` : ''}
+          ${m.color_hex ? `颜色：${escapeHtml(m.color_hex)}<br/>` : ''}
+          ${m.file_size ? `大小：${formatBytes(m.file_size)}<br/>` : ''}
+        </div>
+      `;
+        modelList.appendChild(div);
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function formatBytes(bytes) {
+        const n = Number(bytes || 0);
+        if (!n) return '-';
+        const units = ['B','KB','MB','GB'];
+        let v = n, i = 0;
+        while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+        return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+
+    // ---------
+    // 生成材质
+    // material_text 不为空时：也给一个“材料默认色”（可按你材料体系改映射）
+    // 否则用 color_hex；若 color/material 均空则用 fallback palette
+    // ---------
+    function materialForModel(m, idx) {
+        const hasColor = !!normalizeColorHex(m.color_hex);
+        const hasMaterial = !!(m.material_text && String(m.material_text).trim());
+
+        let color = null;
+
+        if (hasMaterial && !hasColor) {
+            // 材料存在但没颜色：给材料一个默认“中性亮色”，你也可以做材料→颜色映射
+            color = '#D9DEE7';
+        } else if (hasColor) {
+            color = normalizeColorHex(m.color_hex);
+        } else if (!hasColor && !hasMaterial) {
+            color = pickFallbackColor(idx);
+        } else {
+            // material 和 color 都有：按你的需求“材料优先”时可忽略 color
+            // 这里仍然使用 color（更直观）。你要材料优先就把下面改成 '#D9DEE7'
+            color = normalizeColorHex(m.color_hex) || '#D9DEE7';
+        }
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(color),
+            metalness: 0.05,
+            roughness: 0.85,
+            transparent: false,
+        });
+
+        return { mat, color };
+    }
+
+    // ---------
+    // 加载不同格式
+    // ---------
+    async function loadOne(m, idx) {
+        const url = m.file_path;
+        if (!url) return;
+
+        const { mat, color } = materialForModel(m, idx);
+        addModelCard(m, color);
+
+        const type = (m.file_type || '').toLowerCase();
+
+        // glb/gltf
+        if (type === 'glb' || type === 'gltf') {
+            await new Promise((resolve, reject) => {
+                gltfLoader.load(url, (gltf) => {
+                    const obj = gltf.scene || gltf.scenes?.[0];
+                    if (!obj) { resolve(); return; }
+
+                    obj.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material = mat;
+                            child.castShadow = false;
+                            child.receiveShadow = false;
+                        }
+                    });
+
+                    rootGroup.add(obj);
+                    globalBox.expandByObject(obj);
+                    resolve();
+                }, undefined, reject);
+            });
+            return;
+        }
+
+        // draco (drc / draco)
+        if (type === 'drc' || type === 'draco') {
+            await new Promise((resolve, reject) => {
+                dracoLoader.load(url, (geometry) => {
+                    geometry.computeVertexNormals?.();
+
+                    const mesh = new THREE.Mesh(geometry, mat);
+                    rootGroup.add(mesh);
+                    globalBox.expandByObject(mesh);
+                    resolve();
+                }, undefined, reject);
+            });
+            return;
+        }
+
+        // stl
+        if (type === 'stl') {
+            await new Promise((resolve, reject) => {
+                stlLoader.load(url, (geometry) => {
+                    geometry.computeVertexNormals?.();
+                    const mesh = new THREE.Mesh(geometry, mat);
+                    rootGroup.add(mesh);
+                    globalBox.expandByObject(mesh);
+                    resolve();
+                }, undefined, reject);
+            });
+            return;
+        }
+
+        // obj（注意：obj 常含 mtl，这里用统一材质覆盖）
+        if (type === 'obj') {
+            await new Promise((resolve, reject) => {
+                objLoader.load(url, (obj) => {
+                    obj.traverse((child) => {
+                        if (child.isMesh) child.material = mat;
+                    });
+                    rootGroup.add(obj);
+                    globalBox.expandByObject(obj);
+                    resolve();
+                }, undefined, reject);
+            });
+            return;
+        }
+
+        console.warn('Unsupported file_type:', type, m);
+    }
+
+    // ---------
+    // 一键居中/自适应
+    // ---------
+    function fitToBox(box) {
+        if (!box || box.isEmpty()) return;
+        const size = new THREE.Vector3();
+        const center = new THREE.Vector3();
+        box.getSize(size);
+        box.getCenter(center);
+
+        // 将 controls target 设到中心
+        controls.target.copy(center);
+
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = camera.fov * (Math.PI / 180);
+        let dist = (maxDim / 2) / Math.tan(fov / 2);
+        dist *= 1.6;
+
+        const dir = new THREE.Vector3(1, 0.9, 1).normalize();
+        camera.position.copy(center.clone().add(dir.multiplyScalar(dist)));
+        camera.near = Math.max(0.1, dist / 1000);
+        camera.far = Math.max(2000, dist * 10);
+        camera.updateProjectionMatrix();
+        controls.update();
+    }
+
+    document.getElementById('btnFit').addEventListener('click', () => fitToBox(globalBox));
+    document.getElementById('btnReset').addEventListener('click', () => {
+        camera.position.set(0, 300, 500);
+        controls.target.set(0, 0, 0);
+        controls.update();
+    });
+
+    // ---------
+    // 启动：加载所有模型
+    // ---------
+    (async function boot() {
+        // 过滤无效
+        const list = (MODELS || []).filter(m => m && m.file_path);
+
+        if (!list.length) {
+            modelList.innerHTML = '<div class="sub">该场景暂无模型数据。</div>';
+            return;
+        }
+
+        for (let i = 0; i < list.length; i++) {
+            try {
+                await loadOne(list[i], i);
+            } catch (e) {
+                console.error('Load failed:', list[i], e);
+            }
+        }
+
+        fitToBox(globalBox);
+    })();
+
+    // ---------
+    // 渲染循环 + resize
+    // ---------
+    function animate() {
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+    });
+</script>
+</body>
+</html>
