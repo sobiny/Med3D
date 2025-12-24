@@ -3,3 +3,4 @@
 /vendor
 *.log
 .env
+/scene-viewer/node_modules/

@@ -156,7 +156,7 @@ grid.material.transparent = true;
 scene3.add(grid);
 
 const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('https://unpkg.com/three@0.162.0/examples/jsm/libs/draco/');
+dracoLoader.setDecoderPath('/static/draco/');
 
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
