@@ -153,6 +153,8 @@ const grid = new THREE.GridHelper(1000, 20, 0x2a3442, 0x1d2531);
 grid.position.y = 0;
 grid.material.opacity = 0.25;
 grid.material.transparent = true;
+grid.material.depthWrite = false;
+grid.renderOrder = -1;
 scene3.add(grid);
 
 const dracoLoader = new DRACOLoader();
@@ -167,6 +169,14 @@ const objLoader = new OBJLoader();
 const globalBox = new THREE.Box3();
 const modelRoot = new THREE.Group();
 scene3.add(modelRoot);
+
+function updateGridPosition() {
+  if (globalBox.isEmpty()) return;
+  const size = new THREE.Vector3();
+  globalBox.getSize(size);
+  const offset = Math.max(10, size.y * 0.02);
+  grid.position.y = globalBox.min.y - offset;
+}
 
 // =========================
 // 4) UI：文件夹 + 条目
@@ -424,6 +434,8 @@ const body = document.body;
 const btnTogglePanel = document.getElementById('btnTogglePanel');
 const topbarEl = document.querySelector('.topbar');
 let panelOpen = window.innerWidth > 900;
+const isMobile = window.matchMedia('(max-width: 900px)').matches;
+if (isMobile) panelOpen = true;
 
 function syncPanelState(forceOpen = null) {
   if (forceOpen !== null) panelOpen = forceOpen;
@@ -511,6 +523,7 @@ async function loadOne(m, idx) {
 
     modelRoot.add(wrapper);
     globalBox.expandByObject(wrapper);
+    updateGridPosition();
     return wrapper;
   };
 
