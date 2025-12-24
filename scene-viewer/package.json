@@ -1,0 +1,16 @@
+{
+  "name": "med3d-scene-viewer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Scene viewer build for tv module",
+  "scripts": {
+    "build": "webpack --mode production"
+  },
+  "dependencies": {
+    "three": "0.162.0"
+  },
+  "devDependencies": {
+    "webpack": "5.94.0",
+    "webpack-cli": "5.1.4"
+  }
+}
