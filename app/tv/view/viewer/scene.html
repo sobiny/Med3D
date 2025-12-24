@@ -40,68 +40,129 @@
         }
         .btn.small { padding: 6px 8px; font-size: 11px; }
         .btn:active { transform: translateY(1px); }
-        .progress {
-            margin-bottom: 12px;
-        }
+        .progress { margin-bottom: 12px; }
         .progress-bar {
-            position: relative;
-            width: 100%;
-            height: 8px;
-            border-radius: 999px;
-            background: rgba(255,255,255,.08);
-            overflow: hidden;
+            position: relative; width: 100%; height: 8px; border-radius: 999px;
+            background: rgba(255,255,255,.08); overflow: hidden;
         }
         .progress-fill {
-            position: absolute;
-            left: 0; top: 0; bottom: 0;
-            width: 0%;
+            position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
             border-radius: 999px;
             background: linear-gradient(90deg, #7dd0ff, #9cd8ff);
             box-shadow: 0 0 16px rgba(124,209,255,.35);
             transition: width .2s ease;
         }
-        .progress-text {
-            font-size: 12px;
-            opacity: .75;
-            margin: 0 0 6px;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 36px;
-            height: 20px;
-        }
+        .progress-text { font-size: 12px; opacity: .75; margin: 0 0 6px; }
+        .switch { position: relative; display: inline-block; width: 36px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
-            position: absolute;
-            cursor: pointer;
-            inset: 0;
+            position: absolute; cursor: pointer; inset: 0;
             background-color: rgba(255,255,255,.2);
-            transition: .2s;
-            border-radius: 34px;
+            transition: .2s; border-radius: 34px;
         }
         .slider:before {
-            position: absolute;
-            content: "";
-            height: 14px;
-            width: 14px;
-            left: 3px;
-            bottom: 3px;
-            background-color: #0f141c;
-            transition: .2s;
-            border-radius: 50%;
+            position: absolute; content: "";
+            height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: #0f141c; transition: .2s; border-radius: 50%;
             box-shadow: 0 2px 6px rgba(0,0,0,.35);
         }
         .switch input:checked + .slider { background-color: #7dd0ff; }
         .switch input:checked + .slider:before { transform: translateX(16px); }
         .card-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
-        .range {
-            display: flex; align-items: center; gap: 6px; font-size: 12px;
-            flex: 1 1 150px;
-        }
+        .range { display: flex; align-items: center; gap: 6px; font-size: 12px; flex: 1 1 150px; }
         .range input[type=range] { flex: 1; accent-color: #7dd0ff; }
         .status { font-size: 12px; opacity: .8; }
         .top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        /* -------------------------
+           Folder UI（可收缩“文件夹”）
+           ✅ 默认全部折叠
+           ------------------------- */
+        .folders { display: flex; flex-direction: column; gap: 10px; }
+        details.folder {
+            border-radius: 12px;
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(255,255,255,.08);
+            overflow: hidden;
+        }
+        details.folder[open] { background: rgba(255,255,255,.04); }
+        details.folder summary {
+            list-style: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 10px;
+            user-select: none;
+            outline: none;
+        }
+        details.folder summary::-webkit-details-marker { display: none; }
+        .folder-left {
+            display: flex; align-items: center; gap: 8px;
+            font-weight: 650; font-size: 13px;
+        }
+        .folder-icon {
+            width: 18px; height: 18px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 6px;
+            background: rgba(125,208,255,.14);
+            border: 1px solid rgba(125,208,255,.25);
+            font-size: 12px;
+        }
+        .folder-meta {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-size: 12px; opacity: .9;
+        }
+        .folder-count {
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,.12);
+            background: rgba(255,255,255,.06);
+            font-size: 11px;
+        }
+        .chev {
+            width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,.10);
+            background: rgba(255,255,255,.04);
+            font-size: 12px;
+            transition: transform .18s ease;
+        }
+        details.folder[open] .chev { transform: rotate(90deg); }
+        .folder-body {
+            padding: 10px 10px 2px;
+            border-top: 1px solid rgba(255,255,255,.06);
+        }
+        .folder-empty {
+            padding: 10px;
+            font-size: 12px;
+            opacity: .7;
+            border-radius: 10px;
+            background: rgba(255,255,255,.03);
+            border: 1px dashed rgba(255,255,255,.10);
+            margin-bottom: 10px;
+        }
+
+        /* ✅ 每个目录：可见/隐藏 开关 */
+        .folder-vis {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,.12);
+            background: rgba(255,255,255,.04);
+            opacity: 1;
+        }
+        .folder-vis.toggle-on {
+            border-color: rgba(125,208,255,.35);
+            background: rgba(125,208,255,.10);
+            box-shadow: 0 0 18px rgba(124,209,255,.10);
+        }
+        .folder-vis-text { font-size: 11px; opacity: .9; }
+        .folder-vis .switch { transform: scale(.9); transform-origin: right center; }
+
         @media (max-width: 900px) {
             :root { --panel-width: 100%; }
             #wrap { top: calc(var(--topbar-height) + 6px); right: 0; }
@@ -146,8 +207,10 @@
                 <div class="progress-fill" id="progressFill"></div>
             </div>
         </div>
-        <div id="modelList"></div>
+
+        <div id="modelList" class="folders"></div>
     </div>
+
     <div class="section">
         <h3>操作</h3>
         <div class="sub">
@@ -162,6 +225,7 @@
     const SCENE = <?php echo json_encode($scene, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); ?>;
     const MODELS = <?php echo json_encode($models, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); ?>;
 </script>
+
 <script type="importmap">
 {
   "imports": {
@@ -170,7 +234,7 @@
   }
 }
 </script>
-<!-- Three.js (module) -->
+
 <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -180,37 +244,71 @@
     import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
     // ---------
-    // 颜色策略：严肃、医疗风格偏中性
-    // 只有当 color_hex 和 material_text 都为空时才会依次分配
+    // 颜色策略：严肃、医疗风格偏中性（更亮一点）
     // ---------
     const FALLBACK_PALETTE = [
-        '#D9DEE7', // 冷灰白
-        '#BFC9D6', // 钢蓝灰
-        '#C9D3C1', // 医用灰绿
-        '#D6C7B8', // 暖灰褐
-        '#C7CCD3', // 中性灰
-        '#D1D7DD', // 浅灰蓝
-        '#C9C2C9', // 灰紫（很淡）
-        '#D0D0C8', // 灰米
+        '#D9DEE7', '#BFC9D6', '#C9D3C1', '#D6C7B8',
+        '#C7CCD3', '#D1D7DD', '#C9C2C9', '#D0D0C8',
     ];
-
-    function pickFallbackColor(idx) {
-        return FALLBACK_PALETTE[idx % FALLBACK_PALETTE.length];
-    }
+    const pickFallbackColor = (idx) => FALLBACK_PALETTE[idx % FALLBACK_PALETTE.length];
 
     function normalizeColorHex(s) {
         if (!s) return '';
         const t = String(s).trim();
         if (!t) return '';
-        // 允许 '#fff' '#ffffff'
         if (t[0] === '#') return t;
-        // 允许 'ffffff'
         if (/^[0-9a-fA-F]{6}$/.test(t)) return '#' + t;
-        return t; // 允许 rgba(...) 等
+        return t;
+    }
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
+    // -------------------------------------------------------
+    // ✅ 按“中文 display_name”分类（你说中文是固定的）
+    // -------------------------------------------------------
+    const CN_SETS = {
+        cardio: new Set([
+            '心脏','主动脉','肺静脉','左心耳',
+            '上腔静脉','下腔静脉','头臂干','右锁骨下动脉','左锁骨下动脉',
+            '右颈总动脉','左颈总动脉','左头臂静脉','右头臂静脉'
+        ]),
+        organ: new Set([
+            '肝脏','胆囊','胰腺','脾脏','胃','十二指肠','门静脉及脾静脉',
+            '右肾上腺','左肾上腺','右肾','左肾','食管'
+        ]),
+        lung: new Set([
+            '左肺','右肺','左肺上叶','左肺下叶','右肺上叶','右肺中叶','右肺下叶',
+            '气管'
+        ]),
+        bone: new Set(['骨骼'])
+    };
+
+    function getCNName(m) {
+        const s = (m?.display_name || m?.name || m?.title || '').toString().trim();
+        return s;
+    }
+
+    function categorizeModelByCN(m) {
+        const cn = getCNName(m);
+        if (CN_SETS.cardio.has(cn)) return 'cardio';
+        if (CN_SETS.lung.has(cn))   return 'lung';
+        if (CN_SETS.organ.has(cn))  return 'organ';
+        if (CN_SETS.bone.has(cn))   return 'bone';
+        return 'other';
+    }
+
+    // ✅ 所有目录默认折叠：open=false
+    const CATEGORIES = [
+        { id: 'cardio', title: '心血管系统', icon: 'CV', open: false },
+        { id: 'lung',   title: '肺',       icon: 'LU', open: false },
+        { id: 'organ',  title: '内脏',     icon: 'OR', open: false },
+        { id: 'bone',   title: '骨骼',     icon: 'BO', open: false },
+        { id: 'other',  title: '其他',     icon: 'ET', open: false },
+    ];
+
     // ---------
-    // 初始化 three.js 场景
+    // three.js 场景
     // ---------
     const container = document.getElementById('wrap');
     const scene = new THREE.Scene();
@@ -222,7 +320,7 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
     container.appendChild(renderer.domElement);
@@ -230,7 +328,6 @@
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    // Lights
     scene.add(new THREE.HemisphereLight(0xeff5ff, 0x0b0f14, 0.45));
     scene.add(new THREE.AmbientLight(0xffffff, 0.75));
     const dir1 = new THREE.DirectionalLight(0xffffff, 0.9);
@@ -245,16 +342,12 @@
     rim.position.set(0.2, 0.8, 1.4);
     scene.add(rim);
 
-    // Ground helpers (subtle)
     const grid = new THREE.GridHelper(1000, 20, 0x2a3442, 0x1d2531);
     grid.position.y = 0;
     grid.material.opacity = 0.25;
     grid.material.transparent = true;
     scene.add(grid);
 
-    // Draco decoder (关键：必须指向 decoder 文件目录)
-    // 推荐你把 draco decoder 放到：/static/draco/ 目录下（draco_decoder.js / .wasm）
-    // 如果你现在没有本地文件，可先用 CDN（但生产建议本地化）
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');
 
@@ -264,39 +357,157 @@
     const stlLoader = new STLLoader();
     const objLoader = new OBJLoader();
 
-    // 用于“一键居中”
     const globalBox = new THREE.Box3();
     const modelRoot = new THREE.Group();
     scene.add(modelRoot);
 
     // ---------
-    // UI 渲染：侧边栏列表
+    // UI：文件夹
     // ---------
     const modelList = document.getElementById('modelList');
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
-
-    const progressState = {
-        loaded: 0,
-        total: 0,
-    };
+    const progressState = { loaded: 0, total: 0 };
 
     function updateProgress(label = '正在下载…') {
         const pct = progressState.total > 0 ? Math.min(100, (progressState.loaded / progressState.total) * 100) : 0;
         progressFill.style.width = `${pct}%`;
         progressText.textContent = `${label}（${pct.toFixed(0)}%）`;
+    }
+
+    // folderRefs: catId -> { details, body, countEl, emptyEl, count, visible, visWrap, visInput, visText }
+    const folderRefs = new Map();
+
+    function setFolderVisible(catId, visible) {
+        const ref = folderRefs.get(catId);
+        if (!ref) return;
+        ref.visible = !!visible;
+
+        // UI
+        if (ref.visInput) ref.visInput.checked = ref.visible;
+        if (ref.visText) ref.visText.textContent = ref.visible ? '可见' : '隐藏';
+        if (ref.visWrap) ref.visWrap.classList.toggle('toggle-on', ref.visible);
+
+        // Apply to existing entries in this folder
+        for (const e of entries) {
+            if (!e?.wrapper || !e?.card) continue;
+            if (e.catId !== catId) continue;
+            refreshEntryVisible(e);
         }
+    }
 
-        function addModelCard(m, color) {
-            const div = document.createElement('div');
-            div.className = 'item';
+    function createFolder(cat) {
+        const details = document.createElement('details');
+        details.className = 'folder';
+        if (cat.open) details.open = true; // ✅ 默认 false -> 折叠
 
+        const summary = document.createElement('summary');
+        summary.innerHTML = `
+        <div class="folder-left">
+          <span class="folder-icon">${escapeHtml(cat.icon)}</span>
+          <span>${escapeHtml(cat.title)}</span>
+        </div>
+        <div class="folder-meta">
+          <div class="folder-vis toggle-on" role="button" tabindex="0" title="显示/隐藏此目录下全部模型">
+            <span class="folder-vis-text">可见</span>
+            <label class="switch" aria-label="目录显示/隐藏">
+              <input class="folder-vis-input" type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <span class="folder-count">0</span>
+          <span class="chev">›</span>
+        </div>
+      `;
+
+        const body = document.createElement('div');
+        body.className = 'folder-body';
+
+        const empty = document.createElement('div');
+        empty.className = 'folder-empty';
+        empty.textContent = '暂无模型';
+        body.appendChild(empty);
+
+        details.appendChild(summary);
+        details.appendChild(body);
+        modelList.appendChild(details);
+
+        const countEl = summary.querySelector('.folder-count');
+        const visWrap = summary.querySelector('.folder-vis');
+        const visInput = summary.querySelector('.folder-vis-input');
+        const visText = summary.querySelector('.folder-vis-text');
+
+        // 默认：目录可见
+        const ref = { details, body, countEl, emptyEl: empty, count: 0, visible: true, visWrap, visInput, visText };
+        folderRefs.set(cat.id, ref);
+
+        // ✅ 防止点“目录可见开关”时触发 details 展开/收起
+        const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+
+        visWrap.addEventListener('click', (e) => {
+            stop(e);
+            visInput.checked = !visInput.checked;
+            visInput.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        visWrap.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                stop(e);
+                visInput.checked = !visInput.checked;
+                visInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+
+        // 点 input 自己也要阻止冒泡到 summary
+        visInput.addEventListener('click', (e) => e.stopPropagation());
+        visInput.addEventListener('change', (e) => {
+            e.stopPropagation();
+            setFolderVisible(cat.id, e.target.checked);
+        });
+    }
+
+    CATEGORIES.forEach(createFolder);
+
+    function bumpFolderCount(catId) {
+        const ref = folderRefs.get(catId);
+        if (!ref) return;
+        ref.count += 1;
+        ref.countEl.textContent = String(ref.count);
+        if (ref.emptyEl) ref.emptyEl.style.display = 'none';
+    }
+
+    // ---------
+    // 目录级别可见控制（entries 里记录 catId）
+    // ---------
+    const entries = []; // { wrapper, material, card, meta, catId }
+
+    function isFolderVisible(catId) {
+        const ref = folderRefs.get(catId);
+        return ref ? !!ref.visible : true;
+    }
+
+    function refreshEntryVisible(entry) {
+        const folderOk = isFolderVisible(entry.catId);
+        entry.wrapper.visible = folderOk && entry.card.toggle.checked;
+        entry.card.status.textContent = entry.wrapper.visible ? '展示中' : '已隐藏';
+    }
+
+    // ---------
+    // 卡片生成（支持默认透明度）
+    // ---------
+    function addModelCard(m, color, parentEl, defaultOpacity = 100) {
+        const div = document.createElement('div');
+        div.className = 'item';
         const dot = `<span class="dot" style="background:${color}"></span>`;
+
+        const op = Math.max(0, Math.min(100, Number(defaultOpacity) || 100));
 
         div.innerHTML = `
         <div class="row">
           <div class="name">${dot}${escapeHtml(m.display_name || '未命名')}</div>
-          <label class="switch"><input type="checkbox" checked disabled aria-label="显示 / 隐藏模型"><span class="slider"></span></label>
+          <label class="switch">
+            <input type="checkbox" checked disabled aria-label="显示 / 隐藏模型">
+            <span class="slider"></span>
+          </label>
         </div>
         <div class="sub">
           ${m.material_text ? `材料：${escapeHtml(m.material_text)}<br/>` : ''}
@@ -306,13 +517,15 @@
         <div class="card-controls">
           <div class="range">
             <span>透明度</span>
-            <input type="range" min="0" max="100" value="100" disabled aria-label="调整透明度">
-            <span class="range-value">100%</span>
+            <input type="range" min="0" max="100" value="${op}" disabled aria-label="调整透明度">
+            <span class="range-value">${op}%</span>
           </div>
           <button class="btn small" disabled>聚焦</button>
         </div>
       `;
-        modelList.appendChild(div);
+
+        (parentEl || modelList).appendChild(div);
+
         return {
             root: div,
             toggle: div.querySelector('input[type=checkbox]'),
@@ -323,33 +536,18 @@
         };
     }
 
-    function escapeHtml(s) {
-        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-
     // ---------
-    // 生成材质
-    // material_text 不为空时：也给一个“材料默认色”（可按你材料体系改映射）
-    // 否则用 color_hex；若 color/material 均空则用 fallback palette
+    // 材质
     // ---------
     function materialForModel(m, idx) {
         const hasColor = !!normalizeColorHex(m.color_hex);
         const hasMaterial = !!(m.material_text && String(m.material_text).trim());
-
         let color = null;
 
-        if (hasMaterial && !hasColor) {
-            // 材料存在但没颜色：给材料一个默认“中性亮色”，你也可以做材料→颜色映射
-            color = '#D9DEE7';
-        } else if (hasColor) {
-            color = normalizeColorHex(m.color_hex);
-        } else if (!hasColor && !hasMaterial) {
-            color = pickFallbackColor(idx);
-        } else {
-            // material 和 color 都有：按你的需求“材料优先”时可忽略 color
-            // 这里仍然使用 color（更直观）。你要材料优先就把下面改成 '#D9DEE7'
-            color = normalizeColorHex(m.color_hex) || '#D9DEE7';
-        }
+        if (hasMaterial && !hasColor) color = '#D9DEE7';
+        else if (hasColor) color = normalizeColorHex(m.color_hex);
+        else if (!hasColor && !hasMaterial) color = pickFallbackColor(idx);
+        else color = normalizeColorHex(m.color_hex) || '#D9DEE7';
 
         const mat = new THREE.MeshStandardMaterial({
             color: new THREE.Color(color),
@@ -357,24 +555,34 @@
             roughness: 0.85,
             transparent: true,
             opacity: 1,
+            side: THREE.DoubleSide,
         });
-
+        mat.flatShading = false;
         return { mat, color };
     }
 
     // ---------
-    // 加载不同格式
+    // 加载模型
     // ---------
     async function loadOne(m, idx) {
         const url = m.file_path;
         if (!url) return;
 
+        const catId = categorizeModelByCN(m);
+        const folder = folderRefs.get(catId) || folderRefs.get('other');
+        const parentEl = folder?.body || modelList;
+
+        // ✅ 肺部系统默认透明度 70%
+        const defaultOpacity = (catId === 'lung') ? 70 : 100;
+
         const { mat, color } = materialForModel(m, idx);
-        const card = addModelCard(m, color);
+        const card = addModelCard(m, color, parentEl, defaultOpacity);
+        bumpFolderCount(folder ? catId : 'other');
 
         const modelTotal = Number(m.file_size) || 1;
         let modelLoaded = 0;
         const progressLabel = `下载 ${m.display_name || m.file_type || '模型'}`;
+
         const markFailed = () => {
             card.status.textContent = '加载失败';
             card.toggle.disabled = true;
@@ -388,9 +596,8 @@
             if (evt.lengthComputable && evt.total > 0) {
                 const ratio = modelTotal / evt.total;
                 current = Math.min(modelTotal, evt.loaded * ratio);
-            } else {
-                current = Math.min(modelTotal, evt.loaded);
-            }
+            } else current = Math.min(modelTotal, evt.loaded);
+
             const delta = current - modelLoaded;
             if (delta > 0) {
                 modelLoaded += delta;
@@ -413,7 +620,6 @@
         const addModelToScene = (object) => {
             const wrapper = new THREE.Group();
             wrapper.add(object);
-            // 将 Z-up 数据旋转为 three.js 的 Y-up，模型由“趴着”立起来
             wrapper.rotation.x = -Math.PI / 2;
             modelRoot.add(wrapper);
             globalBox.expandByObject(wrapper);
@@ -426,17 +632,11 @@
                 gltfLoader.load(url, (gltf) => {
                     const obj = gltf.scene || gltf.scenes?.[0];
                     if (!obj) { finalizeProgress(); resolve(); return; }
-
                     obj.traverse((child) => {
-                        if (child.isMesh) {
-                            child.material = mat;
-                            child.castShadow = false;
-                            child.receiveShadow = false;
-                        }
+                        if (child.isMesh) child.material = mat;
                     });
-
                     const wrapper = addModelToScene(obj);
-                    bindCard(card, { wrapper, material: mat, meta: m });
+                    bindCard(card, { wrapper, material: mat, meta: m, catId });
                     finalizeProgress();
                     resolve({ wrapper });
                 }, handleProgress, (err) => { finalizeProgress(); markFailed(); reject(err); });
@@ -444,15 +644,14 @@
             return;
         }
 
-        // draco (drc / draco)
+        // draco
         if (type === 'drc' || type === 'draco') {
             await new Promise((resolve, reject) => {
                 dracoLoader.load(url, (geometry) => {
                     geometry.computeVertexNormals?.();
-
                     const mesh = new THREE.Mesh(geometry, mat);
                     const wrapper = addModelToScene(mesh);
-                    bindCard(card, { wrapper, material: mat, meta: m });
+                    bindCard(card, { wrapper, material: mat, meta: m, catId });
                     finalizeProgress();
                     resolve({ wrapper });
                 }, handleProgress, (err) => { finalizeProgress(); markFailed(); reject(err); });
@@ -464,12 +663,10 @@
         if (type === 'stl') {
             await new Promise((resolve, reject) => {
                 stlLoader.load(url, (geometry) => {
-                    // 原始 STL 从 CT 重建是“平躺”的，旋转到直立朝向
-                    geometry.rotateX(-Math.PI / 2);
                     geometry.computeVertexNormals?.();
                     const mesh = new THREE.Mesh(geometry, mat);
                     const wrapper = addModelToScene(mesh);
-                    bindCard(card, { wrapper, material: mat, meta: m });
+                    bindCard(card, { wrapper, material: mat, meta: m, catId });
                     finalizeProgress();
                     resolve({ wrapper });
                 }, handleProgress, (err) => { finalizeProgress(); markFailed(); reject(err); });
@@ -477,15 +674,13 @@
             return;
         }
 
-        // obj（注意：obj 常含 mtl，这里用统一材质覆盖）
+        // obj
         if (type === 'obj') {
             await new Promise((resolve, reject) => {
                 objLoader.load(url, (obj) => {
-                    obj.traverse((child) => {
-                        if (child.isMesh) child.material = mat;
-                    });
+                    obj.traverse((child) => { if (child.isMesh) child.material = mat; });
                     const wrapper = addModelToScene(obj);
-                    bindCard(card, { wrapper, material: mat, meta: m });
+                    bindCard(card, { wrapper, material: mat, meta: m, catId });
                     finalizeProgress();
                     resolve({ wrapper });
                 }, handleProgress, (err) => { finalizeProgress(); markFailed(); reject(err); });
@@ -497,30 +692,44 @@
         card.status.textContent = '格式暂不支持';
     }
 
+    // ---------
+    // 绑定卡片：显示/透明度/聚焦
+    // ✅ 受“目录可见”开关影响
+    // ---------
     function bindCard(card, entry) {
         if (!card) return;
+
         card.status.textContent = '展示中';
         card.toggle.disabled = false;
         card.opacityRange.disabled = false;
         card.focusBtn.disabled = false;
 
-        card.toggle.addEventListener('change', () => {
-            entry.wrapper.visible = card.toggle.checked;
-            card.status.textContent = card.toggle.checked ? '展示中' : '已隐藏';
-        });
+        // 保存 entry，给“目录显示/隐藏”使用
+        entries.push({ ...entry, card });
+
+        card.toggle.addEventListener('change', () => refreshEntryVisible({ ...entry, card }));
 
         const applyOpacity = (value) => {
             const clamped = Math.max(0, Math.min(100, value));
             const v = clamped / 100;
+
             entry.material.opacity = v;
             entry.material.transparent = v < 1;
-            entry.material.depthWrite = v >= 0.6;
+            entry.material.depthWrite = (v === 1);
+            entry.material.depthTest = true;
+
+            entry.wrapper.traverse(o => { if (o.isMesh) o.renderOrder = (v < 1) ? 2 : 0; });
+            entry.material.needsUpdate = true;
             card.opacityValue.textContent = `${Math.round(clamped)}%`;
         };
 
+        // 初始透明度（肺部默认 70% 已在 card 的 range.value 设置）
         applyOpacity(Number(card.opacityRange.value || 100));
         card.opacityRange.addEventListener('input', (e) => applyOpacity(Number(e.target.value)));
         card.focusBtn.addEventListener('click', () => fitToObject(entry.wrapper));
+
+        // 初始可见性：目录开关 + 单模型开关
+        refreshEntryVisible({ ...entry, card });
     }
 
     // ---------
@@ -528,12 +737,12 @@
     // ---------
     function fitToBox(box) {
         if (!box || box.isEmpty()) return;
+
         const size = new THREE.Vector3();
         const center = new THREE.Vector3();
         box.getSize(size);
         box.getCenter(center);
 
-        // 将 controls target 设到中心
         controls.target.copy(center);
 
         const maxDim = Math.max(size.x, size.y, size.z);
@@ -548,6 +757,11 @@
         camera.updateProjectionMatrix();
         controls.update();
     }
+    function fitToObject(obj) {
+        if (!obj) return;
+        const box = new THREE.Box3().setFromObject(obj);
+        fitToBox(box);
+    }
 
     document.getElementById('btnFit').addEventListener('click', () => fitToBox(globalBox));
     document.getElementById('btnReset').addEventListener('click', () => {
@@ -556,12 +770,9 @@
         controls.update();
     });
 
-    function fitToObject(obj) {
-        if (!obj) return;
-        const box = new THREE.Box3().setFromObject(obj);
-        fitToBox(box);
-    }
-
+    // ---------
+    // 面板开关
+    // ---------
     const body = document.body;
     const btnTogglePanel = document.getElementById('btnTogglePanel');
     const topbarEl = document.querySelector('.topbar');
@@ -586,16 +797,13 @@
     if (topbarEl) topbarObserver.observe(topbarEl);
 
     window.addEventListener('resize', () => {
-        if (window.innerWidth > 900 && !panelOpen) {
-            syncPanelState(true);
-        }
+        if (window.innerWidth > 900 && !panelOpen) syncPanelState(true);
     });
 
     // ---------
     // 启动：加载所有模型
     // ---------
     (async function boot() {
-        // 过滤无效
         const list = (MODELS || []).filter(m => m && m.file_path);
 
         if (!list.length) {
@@ -614,6 +822,13 @@
             } catch (e) {
                 console.error('Load failed:', list[i], e);
             }
+        }
+
+        // 空文件夹兜底显示“暂无模型”
+        for (const cat of CATEGORIES) {
+            const ref = folderRefs.get(cat.id);
+            if (!ref) continue;
+            if (ref.count <= 0 && ref.emptyEl) ref.emptyEl.style.display = 'block';
         }
 
         progressState.loaded = progressState.total;
