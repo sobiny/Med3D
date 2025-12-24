@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace app\tv\controller;
 
+use Qiniu\Auth as QiniuAuth;
 use think\facade\Db;
 use think\facade\Request;
 use think\response\Json;
@@ -379,6 +380,98 @@ class Api
             return $this->ok($ret, 'image created');
         } catch (\Throwable $e) {
             return $this->fail('imageCreate failed: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * 获取七牛私有下载 URL（7天有效，剩余<6天才刷新）
+     *
+     * @param string $key               七牛对象 key
+     * @param array  $model             当前模型记录（需包含 private_url / private_expires）
+     * @return string
+     */
+    private function privateQiniuUrl(string $key, array $model = []): string
+    {
+        $cfg = config('qiniu');
+
+        // 总有效期：7 天
+        $ttlTotal   =  7 * 24 * 3600;     // 604800
+        // 刷新阈值：6 天
+        $ttlRefresh = 1 * 24 * 3600;     // 518400
+
+        $now = time();
+
+        // 如果已有 URL，且有效期还充足，直接复用
+        if (!empty($model['private_url']) && !empty($model['private_expires'])) {
+            if (($model['private_expires'] - $now) > $ttlRefresh) {
+                return $model['private_url'];
+            }
+        }
+
+        // 否则重新生成
+        $auth = new \Qiniu\Auth($cfg['ak'], $cfg['sk']);
+
+        $baseUrl = ltrim($key, '/');
+        $expires = $now + $ttlTotal;
+
+        $signedUrl = $auth->privateDownloadUrl($baseUrl, $expires);
+
+        // ⚠️ 这里建议你把新 URL & 过期时间写回数据库
+        if (!empty($model['id'])) {
+            \think\facade\Db::name('tv_models')
+                ->where('id', $model['id'])
+                ->update([
+                    'private_url'     => $signedUrl,
+                    'private_expires' => $expires,
+                    'updated_at'      => date('Y-m-d H:i:s'),
+                ]);
+        }
+
+        return $signedUrl;
+    }
+    public function sceneDetail(): \think\response\Json
+    {
+        // 允许 GET
+        $sceneId = (int)\think\facade\Request::get('scene_id', 0);
+        if ($sceneId <= 0) return $this->fail('scene_id required', 422);
+
+        try {
+            $scene = \think\facade\Db::name('tv_scenes')
+                ->whereNull('deleted_at')
+                ->where('id', $sceneId)
+                ->find();
+
+            if (!$scene) return $this->fail('scene not found', 404);
+
+            $models = Db::name('tv_models')
+                ->whereNull('deleted_at')
+                ->where('scene_id', $sceneId)
+                ->order('id', 'asc')
+                ->select()
+                ->toArray();
+
+            $modelsForView = array_map(function ($m) {
+                $key = ltrim(parse_url($m['file_path'], PHP_URL_PATH), '/');
+                return [
+                    'id'            => (int)$m['id'],
+                    'display_name'  => (string)($m['display_name'] ?? ''),
+                    'file_path'     => $this->privateQiniuUrl($m['file_path'], $m),
+                    'file_type'     => strtolower((string)($m['file_type'] ?? '')),
+                    'mime'          => (string)($m['mime'] ?? ''),
+                    'file_size'     => isset($m['file_size_bytes']) ? (int)$m['file_size_bytes'] : null,
+                    'file_hash'     => (string)($m['file_hash'] ?? ''),
+                    'color_hex'     => (string)($m['color_hex'] ?? ''),
+                    'material_text' => (string)($m['material_text'] ?? ''),
+                    'info_json'     => (string)($m['info_json'] ?? ''),
+                ];
+            }, $models);
+
+            return $this->ok([
+                'scene'  => $scene,
+                'models' => $modelsForView,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->fail('sceneDetail failed: ' . $e->getMessage(), 500);
         }
     }
 }
